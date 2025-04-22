@@ -1,0 +1,885 @@
+	<!DOCTYPE html>
+	<html lang="pt-BR">
+	<head>
+	  <meta charset="UTF-8" />
+	  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	  <title>Painel Dinâmico de Desempenho</title>
+	  <!-- Tailwind CSS -->
+	  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+	  <!-- Chart.js e jsPDF -->
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	  <style>
+		/* Paleta de cores personalizada */
+		:root {
+		  --primary-dark: #011640;    /* Azul escuro */
+		  --secondary-dark: #012340;  /* Azul mais escuro */
+		  --neutral-light: #D9D2C5;   /* Bege claro */
+		  --accent: #F27141;          /* Laranja */
+		  --accent-dark: #e02525;     /* Bordô */
+		  
+		  --background-light: #F8F7F4;
+		  --card-bg-light: #FFFFFF;
+		  --text-dark: #011640;
+		  --text-light: #F8F7F4;
+		  
+		  --success: #4E9F3D;
+		  --danger: #e02525;
+		  --warning: #EAAC8B;
+		  
+		  --border-radius: 0.75rem;
+		  --transition-speed: 0.3s;
+		}
+
+		/* Estilos base */
+		html {
+		  scroll-behavior: smooth;
+		}
+		
+		body {
+		  background-color: var(--background-light);
+		  color: var(--text-dark);
+		  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+		  transition: background-color var(--transition-speed), color var(--transition-speed);
+		  line-height: 1.5;
+		}
+		
+		body.dark {
+		  background-color: var(--secondary-dark);
+		  color: var(--neutral-light);
+		}
+		
+		.card {
+		  background-color: var(--card-bg-light);
+		  border-radius: var(--border-radius);
+		  box-shadow: 0 4px 12px rgba(1, 22, 63, 0.08);
+		  transition: all var(--transition-speed);
+		}
+		
+		.card:hover { 
+		  box-shadow: 0 8px 16px rgba(1, 22, 63, 0.12); 
+		}
+		
+		body.dark .card { 
+		  background-color: var(--primary-dark); 
+		  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+		}
+		
+		.btn {
+		  font-weight: 600;
+		  border-radius: 0.5rem;
+		  transition: all var(--transition-speed);
+		  padding: 0.75rem 1.25rem;
+		  display: inline-flex;
+		  align-items: center;
+		  justify-content: center;
+		  gap: 0.5rem;
+		  cursor: pointer;
+		  outline: none;
+		  text-transform: uppercase;
+		  letter-spacing: 0.025em;
+		  font-size: 0.875rem;
+		}
+		
+		.btn:focus { 
+		  box-shadow: 0 0 0 3px rgba(242, 113, 65, 0.4); 
+		}
+		
+		.btn:hover { 
+		  transform: translateY(-2px); 
+		}
+		
+		.btn-primary { 
+		  background-color: var(--accent); 
+		  color: white; 
+		}
+		
+		.btn-primary:hover {
+		  background-color: #E05F2F;
+		}
+		
+		.btn-success { 
+		  background-color: var(--success); 
+		  color: white; 
+		}
+		
+		.btn-danger { 
+		  background-color: var(--danger); 
+		  color: white; 
+		}
+		
+		.btn-neutral { 
+		  background-color: var(--primary-dark); 
+		  color: white; 
+		}
+		
+		body.dark .btn-neutral {
+		  background-color: var(--neutral-light);
+		  color: var(--primary-dark);
+		}
+		
+		input, .input {
+		  background-color: white;
+		  color: var(--text-dark);
+		  border: 2px solid rgba(1, 22, 63, 0.1);
+		  border-radius: 0.5rem;
+		  padding: 0.75rem 1rem;
+		  transition: all var(--transition-speed);
+		  width: 100%;
+		  outline: none;
+		}
+		
+		input:focus, .input:focus {
+		  border-color: var(--accent);
+		  box-shadow: 0 0 0 3px rgba(242, 113, 65, 0.2);
+		}
+		
+		body.dark input, body.dark .input {
+		  background-color: rgba(1, 22, 63, 0.6);
+		  color: var(--neutral-light);
+		  border-color: rgba(216, 209, 197, 0.2);
+		}
+		
+		.badge {
+		  font-size: 0.75rem;
+		  font-weight: 600;
+		  padding: 0.25rem 0.75rem;
+		  border-radius: 9999px;
+		  text-transform: uppercase;
+		  letter-spacing: 0.05em;
+		}
+		
+		.badge-primary { 
+		  background-color: rgba(242, 113, 65, 0.15); 
+		  color: var(--accent); 
+		}
+		
+		.badge-success { 
+		  background-color: rgba(78, 159, 61, 0.15); 
+		  color: var(--success); 
+		}
+		
+		.badge-danger { 
+		  background-color: rgba(115, 57, 57, 0.15); 
+		  color: var(--danger); 
+		}
+		
+		body.dark .badge-primary { 
+		  background-color: rgba(242, 113, 65, 0.3); 
+		  color: #FFB399; 
+		}
+		
+		body.dark .badge-success { 
+		  background-color: rgba(78, 159, 61, 0.3); 
+		  color: #A6E99C; 
+		}
+		
+		body.dark .badge-danger { 
+		  background-color: rgba(115, 57, 57, 0.3); 
+		  color: #FFA199; 
+		}
+		
+		.section-header {
+		  background-color: var(--accent);
+		  border-radius: var(--border-radius);
+		  padding: 1.5rem;
+		  margin-bottom: 1.5rem;
+		  box-shadow: 0 4px 12px rgba(242, 113, 65, 0.2);
+		}
+		
+		body.dark .section-header { 
+		  background-color: var(--primary-dark);
+		  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		}
+		
+		@media (max-width: 640px) {
+		  .card { padding: 1rem !important; }
+		  .btn { padding: 0.5rem 1rem; font-size: 0.75rem; }
+		}
+		
+		/* Notificação de canto de tela */
+		.notificacao {
+		  position: fixed;
+		  top: 20px;
+		  right: 20px;
+		  padding: 15px 20px;
+		  border-radius: 8px;
+		  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		  color: white;
+		  font-weight: 500;
+		  z-index: 9999;
+		  transform: translateX(120%);
+		  transition: transform 0.4s ease-out;
+		  display: flex;
+		  align-items: center;
+		  gap: 10px;
+		}
+		
+		.notificacao.visivel {
+		  transform: translateX(0);
+		}
+		
+		.notificacao-sucesso {
+		  background-color: var(--success);
+		}
+		
+		.notificacao-erro {
+		  background-color: var(--danger);
+		}
+		
+		.notificacao-aviso {
+		  background-color: var(--warning);
+		}
+		
+		.notificacao-icone {
+		  flex-shrink: 0;
+		}
+		
+		.notificacao-mensagem {
+		  flex-grow: 1;
+		}
+		
+		.notificacao-fechar {
+		  background: transparent;
+		  border: none;
+		  color: white;
+		  cursor: pointer;
+		  font-size: 18px;
+		  opacity: 0.7;
+		  transition: opacity 0.2s;
+		  padding: 0;
+		  margin-left: 10px;
+		  line-height: 1;
+		}
+		
+		.notificacao-fechar:hover {
+		  opacity: 1;
+		}
+
+		/* Customizações de gráficos para tema escuro */
+		body.dark .chart-container canvas {
+		  filter: brightness(0.9) contrast(1.1);
+		}
+		
+		/* Efeitos de hover para cards */
+		.stat-card {
+		  position: relative;
+		  overflow: hidden;
+		}
+		
+		.stat-card::after {
+		  content: '';
+		  position: absolute;
+		  top: 0;
+		  left: 0;
+		  width: 100%;
+		  height: 4px;
+		  transform: scaleX(0);
+		  transform-origin: left;
+		  transition: transform 0.3s ease;
+		}
+		
+		.stat-card:hover::after {
+		  transform: scaleX(1);
+		}
+		
+		.stat-card.total::after { background-color: var(--primary-dark); }
+		.stat-card.acertos::after { background-color: var(--success); }
+		.stat-card.erros::after { background-color: var(--danger); }
+		
+		/* Animações */
+		@keyframes fadeIn {
+		  from { opacity: 0; transform: translateY(10px); }
+		  to { opacity: 1; transform: translateY(0); }
+		}
+		
+		.animate-fade-in {
+		  animation: fadeIn 0.5s ease-out forwards;
+		}
+		
+		.count-animation {
+		  transition: all 0.3s ease-out;
+		}
+		
+		.pulse {
+		  animation: pulse 1.5s infinite;
+		}
+		
+		@keyframes pulse {
+		  0% { transform: scale(1); }
+		  50% { transform: scale(1.05); }
+		  100% { transform: scale(1); }
+		}
+	  </style>
+	</head>
+	<body class="min-h-screen p-4 md:p-6 transition-all">
+	  <div class="max-w-6xl mx-auto">
+		<header class="flex flex-col md:flex-row justify-between items-center pt-6 pb-8 gap-4">
+		  <div class="flex items-center">
+			<div class="bg-accent p-3 rounded-lg mr-3 shadow-lg" style="background-color: var(--accent);" aria-hidden="true">
+			  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+			  </svg>
+			</div>
+			<div>
+			  <h1 class="text-3xl font-bold tracking-tight">Painel de Desempenho</h1>
+			  <p class="text-sm opacity-75">Visualize e acompanhe seu progresso</p>
+			</div>
+		  </div>
+		  <div class="flex space-x-3">
+			<button id="toggleView" class="btn btn-primary" aria-label="Alternar entre visão de histórico e contador">
+			  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+			  </svg>
+			  Alternar Visão
+			</button>
+			<button id="toggleDark" class="btn btn-neutral" aria-label="Alternar entre tema claro e escuro">
+			  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+			  </svg>
+			</button>
+		  </div>
+		</header>
+
+		<main class="space-y-8">
+		  <!-- Histórico -->
+		  <section id="historico" class="transition-all animate-fade-in" aria-labelledby="historico-titulo">
+			<div class="section-header">
+			  <h2 id="historico-titulo" class="text-2xl font-bold text-white mb-1">Desempenho dos últimos 7 dias</h2>
+			  <p class="text-white opacity-90">Análise da evolução do seu rendimento</p>
+			</div>
+			
+			<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+			  <!-- Estatísticas -->
+			  <div class="lg:col-span-1 grid grid-cols-2 lg:grid-cols-1 gap-4">
+				<div class="card stat-card total p-5">
+				  <div class="flex justify-between items-center mb-4">
+					<h3 class="text-lg font-medium">Total</h3>
+					<span class="badge badge-primary">7 dias</span>
+				  </div>
+				  <p id="totalCount" class="text-3xl font-bold count-animation">0</p>
+				  <p class="text-sm opacity-75 mt-2">Questões respondidas</p>
+				</div>
+				
+				<div class="card stat-card acertos p-5">
+				  <div class="flex justify-between items-center mb-4">
+					<h3 class="text-lg font-medium" style="color: var(--success);">Acertos</h3>
+					<span class="badge badge-success">7 dias</span>
+				  </div>
+				  <p id="hitCount" class="text-3xl font-bold count-animation" style="color: var(--success);">0</p>
+				  <p class="text-sm opacity-75 mt-2">Questões corretas</p>
+				</div>
+				
+				<div class="card stat-card erros p-5 lg:col-span-1">
+				  <div class="flex justify-between items-center mb-4">
+					<h3 class="text-lg font-medium" style="color: var(--danger);">Erros</h3>
+					<span class="badge badge-danger">7 dias</span>
+				  </div>
+				  <p id="missCount" class="text-3xl font-bold count-animation" style="color: var(--danger);">0</p>
+				  <p class="text-sm opacity-75 mt-2">Questões incorretas</p>
+				</div>
+			  </div>
+			  
+			  <!-- Gráficos -->
+			  <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+				<div class="card p-5">
+				  <h3 class="text-lg font-medium mb-6">Taxa de Aproveitamento</h3>
+				  <div class="flex flex-col items-center chart-container">
+					<div class="mb-4 w-48 h-48 relative">
+					  <canvas id="gaugeChart"></canvas>
+					  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+						<span id="gaugePercent" class="text-4xl font-bold">0%</span>
+						<p id="performanceLabel" class="text-sm opacity-75">SEM DADOS</p>
+					  </div>
+					</div>
+				  </div>
+				</div>
+				
+				<div class="card p-5">
+				  <h3 class="text-lg font-medium mb-6">Evolução Diária</h3>
+				  <div class="h-64 chart-container">
+					<canvas id="lineChart"></canvas>
+				  </div>
+				</div>
+			  </div>
+			</div>
+		  </section>
+
+		  <!-- Contador Dinâmico -->
+		  <section id="contador" class="hidden transition-all animate-fade-in" aria-labelledby="contador-titulo">
+			<div class="section-header">
+			  <h2 id="contador-titulo" class="text-2xl font-bold text-white mb-1">Contador de Desempenho</h2>
+			  <p class="text-white opacity-90">Registre seus acertos e erros em tempo real</p>
+			</div>
+			
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			  <div class="lg:col-span-1">
+				<div class="card p-6">
+				  <h3 class="text-lg font-medium mb-6">Novo Relatório</h3>
+				  
+				  <div class="mb-6">
+					<label for="nome_relatorio" class="block text-sm font-medium mb-2">Nome do relatório</label>
+					<input id="nome_relatorio" type="text" placeholder="Ex: Simulado Matemática" aria-describedby="relatorio-desc" />
+					<p id="relatorio-desc" class="text-xs opacity-75 mt-2">Este nome será usado ao gerar o PDF</p>
+				  </div>
+				  
+				  <div class="grid grid-cols-3 gap-4 mb-8">
+					<div class="text-center p-4 rounded-lg" style="background-color: rgba(78, 159, 61, 0.1);">
+					  <p class="text-sm font-medium mb-1">Acertos</p>
+					  <p id="acertos" class="text-3xl font-bold count-animation" style="color: var(--success);">0</p>
+					</div>
+					<div class="text-center p-4 rounded-lg" style="background-color: rgba(115, 57, 57, 0.1);">
+					  <p class="text-sm font-medium mb-1">Erros</p>
+					  <p id="erros" class="text-3xl font-bold count-animation" style="color: var(--danger);">0</p>
+					</div>
+					<div class="text-center p-4 rounded-lg" style="background-color: rgba(1, 22, 63, 0.1);">
+					  <p class="text-sm font-medium mb-1">Total</p>
+					  <p id="total" class="text-3xl font-bold count-animation" style="color: var(--primary-dark);">0</p>
+					</div>
+				  </div>
+				  
+				  <div class="flex flex-col gap-3">
+					<button id="btnAcertou" class="btn btn-success w-full">
+					  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+						<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+					  </svg>
+					  Acertou
+					</button>
+					<button id="btnErrou" class="btn btn-danger w-full">
+					  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+						<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+					  </svg>
+					  Errou
+					</button>
+					<div class="flex gap-3 mt-4">
+					  <button id="btnResetar" class="btn btn-neutral flex-1">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+						  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+						</svg>
+						Salvar
+					  </button>
+					  <button id="btnImprimirPDF" class="btn btn-primary flex-1">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+						  <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+						</svg>
+						PDF
+					  </button>
+					</div>
+				  </div>
+				</div>
+			  </div>
+			  
+			  <div class="lg:col-span-2">
+				<div class="card p-6 h-full">
+				  <h3 class="text-lg font-medium mb-6">Gráfico de Desempenho</h3>
+				  <div class="h-72 chart-container">
+					<canvas id="chartDesempenho"></canvas>
+				  </div>
+				</div>
+			  </div>
+			</div>
+		  </section>
+		</main>
+		
+		<footer class="mt-12 py-6 text-center opacity-75 text-sm border-t" style="border-color: rgba(1, 22, 63, 0.1);">
+		  <p id="copyright-year"></p>
+		</footer>
+	  </div>
+
+	  <script>
+		// Constantes e configurações
+		const CLASSIFICACOES = {
+		  SEM_DADOS: "SEM DADOS",
+		  EXCELENTE: "EXCELENTE",
+		  BOM: "BOM",
+		  REGULAR: "REGULAR",
+		  PRECISA_MELHORAR: "PRECISA MELHORAR"
+		};
+		const d = new Date();
+		document.getElementById("copyright-year").innerHTML = "&copy; " + d.getFullYear() + " Painel Dinâmico de Desempenho";
+		const STORAGE_KEY = 'desempenho';
+		const TEMA_KEY = 'tema';
+		
+		// Estado da aplicação
+		let desempenho = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+		  historico: [],
+		  contador: { acertos: 0, erros: 0, total: 0, nome: "" }
+		};
+		
+		// Gráficos
+		let gaugeChart, lineChart, chartDesempenho;
+		
+		// Configurações de cores para gráficos
+		const chartColors = {
+		  light: {
+			success: '#4E9F3D',
+			danger: '#e02525',
+			neutral: '#011640',
+			background: '#FFFFFF',
+			text: '#011640'
+		  },
+		  dark: {
+			success: '#7DD75C',
+			danger: '#FF8C84',
+			neutral: '#D9D2C5',
+			background: '#011640',
+			text: '#D9D2C5'
+		  }
+		};
+		
+		// Utilidades
+		function getToday() {
+		  return new Date().toISOString().slice(0, 10);
+		}
+		
+		function getFormattedDate() {
+		  return new Date().toLocaleDateString('pt-BR');
+		}
+		
+		function salvarDados() {
+		  localStorage.setItem(STORAGE_KEY, JSON.stringify(desempenho));
+		}
+		
+		function getClassificacao(percentual) {
+		  if (!percentual) return CLASSIFICACOES.SEM_DADOS;
+		  if (percentual >= 80) return CLASSIFICACOES.EXCELENTE;
+		  if (percentual >= 60) return CLASSIFICACOES.BOM;
+		  if (percentual >= 40) return CLASSIFICACOES.REGULAR;
+		  return CLASSIFICACOES.PRECISA_MELHORAR;
+		}
+		
+		function calcularPercentual(acertos, total) {
+		  return total ? Math.round((acertos / total) * 100) : 0;
+		}
+		
+		// Função para obter cores de acordo com o tema
+		function getThemeColors() {
+		  const isDark = document.body.classList.contains('dark');
+		  return isDark ? chartColors.dark : chartColors.light;
+		}
+		
+		// Atualizações da interface
+		function atualizarContador() {
+		  const acertosEl = document.getElementById('acertos');
+		  const errosEl = document.getElementById('erros');
+		  const totalEl = document.getElementById('total');
+		  
+		  // Adiciona animação para a transição dos números
+		  acertosEl.classList.add('pulse');
+		  setTimeout(() => acertosEl.classList.remove('pulse'), 500);
+		  
+		  acertosEl.textContent = desempenho.contador.acertos;
+		  errosEl.textContent = desempenho.contador.erros;
+		  totalEl.textContent = desempenho.contador.total;
+		}
+		
+		function atualizarEstatisticas() {
+		  const ultimos7 = desempenho.historico.slice(-7);
+		  const total = ultimos7.reduce((s, d) => s + d.total, 0);
+		  const acertos = ultimos7.reduce((s, d) => s + d.acertos, 0);
+		  const erros = ultimos7.reduce((s, d) => s + d.erros, 0);
+		  
+		  // Atualizar contadores com animação
+		  const totalCountEl = document.getElementById('totalCount');
+		  const hitCountEl = document.getElementById('hitCount');
+		  const missCountEl = document.getElementById('missCount');
+		  
+		  totalCountEl.classList.add('pulse');
+		  hitCountEl.classList.add('pulse');
+		  missCountEl.classList.add('pulse');
+		  
+		  setTimeout(() => {
+			totalCountEl.classList.remove('pulse');
+			hitCountEl.classList.remove('pulse');
+			missCountEl.classList.remove('pulse');
+		  }, 500);
+		  
+		  totalCountEl.textContent = total;
+		  hitCountEl.textContent = acertos;
+		  missCountEl.textContent = erros;
+		  
+		  // Atualizar gauge
+		  const percent = calcularPercentual(acertos, total);
+		  document.getElementById('gaugePercent').textContent = percent + "%";
+		  document.getElementById('performanceLabel').textContent = getClassificacao(percent);
+		  atualizarGauge(percent);
+		  
+		  // Atualizar gráfico de linha
+		  atualizarLinha(ultimos7);
+		}
+		
+		// Gráficos
+		function atualizarGauge(percent) {
+		  const ctx = document.getElementById('gaugeChart').getContext('2d');
+		  const colors = getThemeColors();
+		  
+		  if (gaugeChart) {
+			gaugeChart.destroy();
+		  }
+		  
+		  gaugeChart = new Chart(ctx, {
+			type: 'doughnut',
+			data: {
+			  datasets: [{
+				data: [percent, 100 - percent],
+				backgroundColor: [colors.success, 'rgba(220, 220, 220, 0.2)'],
+				borderWidth: 0
+			  }]
+			},
+			options: {
+			  cutout: '80%',
+			  plugins: { legend: { display: false }, tooltip: { enabled: false } },
+			  animation: {
+				animateRotate: true,
+				animateScale: true
+			  }
+			}
+		  });
+			}
+			
+			function atualizarLinha(dados) {
+			  const labels = dados.map(d => d.data.slice(5).split('-').reverse().join('/'));
+			  const acertos = dados.map(d => d.acertos);
+			  const erros = dados.map(d => d.erros);
+			  
+			  const ctx = document.getElementById('lineChart').getContext('2d');
+			  
+			  if (lineChart) {
+				lineChart.destroy();
+			  }
+			  
+			  lineChart = new Chart(ctx, {
+				type: 'line',
+				data: {
+				  labels,
+				  datasets: [
+					{ label: 'Acertos', data: acertos, borderColor: '#22c55e', backgroundColor: '#22c55e33', fill: true },
+					{ label: 'Erros', data: erros, borderColor: '#e02525', backgroundColor: '#e0252533', fill: true }
+				  ]
+				},
+				options: {
+				  plugins: { legend: { display: true } },
+				  scales: { y: { beginAtZero: true, precision: 0 } },
+				  responsive: true,
+				  maintainAspectRatio: false
+				}
+			  });
+			}
+			
+			function atualizarChartDesempenho() {
+			  const ctx = document.getElementById('chartDesempenho').getContext('2d');
+			  
+			  if (chartDesempenho) {
+				chartDesempenho.destroy();
+			  }
+			  
+			  chartDesempenho = new Chart(ctx, {
+				type: 'bar',
+				data: {
+				  labels: ['Acertos', 'Erros'],
+				  datasets: [{
+					data: [desempenho.contador.acertos, desempenho.contador.erros],
+					backgroundColor: ['#22c55e', '#e02525']
+				  }]
+				},
+				options: {
+				  plugins: { legend: { display: false } },
+				  scales: { y: { beginAtZero: true, precision: 0 } },
+				  responsive: true,
+				  maintainAspectRatio: false
+				}
+			  });
+			}
+			
+			// Geração de PDF
+			function gerarPDF() {
+			  try {
+				const { jsPDF } = window.jspdf;
+				const doc = new jsPDF();
+				
+				const nomeRelatorio = document.getElementById('nome_relatorio').value || 'Relatório de Desempenho';
+				const data = getFormattedDate();
+				const { acertos, erros, total } = desempenho.contador;
+				const percentual = calcularPercentual(acertos, total);
+				
+				// Título
+				doc.setFontSize(22);
+				doc.text(nomeRelatorio, 105, 20, { align: 'center' });
+				
+				// Data
+				doc.setFontSize(12);
+				doc.text(`Data: ${data}`, 105, 30, { align: 'center' });
+				
+				// Estatísticas
+				doc.setFontSize(16);
+				doc.text('Estatísticas', 20, 50);
+				
+				doc.setFontSize(14);
+				doc.text(`Total de questões: ${total}`, 20, 60);
+				doc.text(`Acertos: ${acertos}`, 20, 70);
+				doc.text(`Erros: ${erros}`, 20, 80);
+				doc.text(`Taxa de aproveitamento: ${percentual}%`, 20, 90);
+				
+				// Avaliação
+				doc.setFontSize(16);
+				doc.text('Avaliação', 20, 110);
+				doc.setFontSize(14);
+				doc.text(getClassificacao(percentual), 20, 120);
+				
+				// Rodapé
+				doc.setFontSize(10);
+				doc.text('Painel Dinâmico de Desempenho', 105, 280, { align: 'center' });
+				
+				// Salvar PDF
+				doc.save(`${nomeRelatorio.replace(/\s+/g, '_')}_${data.replace(/\//g, '-')}.pdf`);
+			  } catch (error) {
+				console.error("Erro ao gerar PDF:", error);
+				mostrarNotificacao('Erro ao gerar PDF. Verifique a biblioteca jsPDF.', 'error');
+			  }
+			}
+			
+			// Notificações
+			function mostrarNotificacao(mensagem, tipo) {
+			  const notificacao = document.createElement('div');
+			  notificacao.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+				tipo === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+			  }`;
+			  notificacao.textContent = mensagem;
+			  
+			  document.body.appendChild(notificacao);
+			  
+			  setTimeout(() => {
+				notificacao.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+				setTimeout(() => {
+				  document.body.removeChild(notificacao);
+				}, 500);
+			  }, 3000);
+			}
+			
+			// Manipuladores de eventos
+			function registrarAcerto() {
+			  desempenho.contador.acertos++;
+			  desempenho.contador.total++;
+			  atualizarContador();
+			  atualizarChartDesempenho();
+			  salvarDados();
+			}
+			
+			function registrarErro() {
+			  desempenho.contador.erros++;
+			  desempenho.contador.total++;
+			  atualizarContador();
+			  atualizarChartDesempenho();
+			  salvarDados();
+			}
+			
+			function salvarEResetar() {
+			  if (desempenho.contador.total <= 0) {
+				mostrarNotificacao('Não há dados para salvar no histórico.', 'error');
+				return;
+			  }
+			  
+			  // Salvar no histórico
+			  desempenho.historico.push({
+				data: getToday(),
+				acertos: desempenho.contador.acertos,
+				erros: desempenho.contador.erros,
+				total: desempenho.contador.total,
+				nome: document.getElementById('nome_relatorio').value
+			  });
+			  
+			  // Resetar contador
+			  desempenho.contador = { acertos: 0, erros: 0, total: 0, nome: "" };
+			  
+			  // Atualizar interface
+			  atualizarContador();
+			  atualizarChartDesempenho();
+			  atualizarEstatisticas();
+			  
+			  // Limpar campo de nome
+			  document.getElementById('nome_relatorio').value = '';
+			  
+			  // Salvar alterações
+			  salvarDados();
+			  
+			  // Exibir notificação
+			  mostrarNotificacao('Progresso salvo com sucesso!', 'success');
+			}
+			
+			function exportarPDF() {
+			  if (desempenho.contador.total <= 0) {
+				mostrarNotificacao('Não há dados para gerar o PDF.', 'error');
+				return;
+			  }
+			  
+			  gerarPDF();
+			}
+			
+			function alternarVisao() {
+			  const historicoEl = document.getElementById('historico');
+			  const contadorEl = document.getElementById('contador');
+			  
+			  historicoEl.classList.toggle('hidden');
+			  contadorEl.classList.toggle('hidden');
+			  
+			  // Atualizar gráficos quando visíveis
+			  if (!historicoEl.classList.contains('hidden')) {
+				atualizarEstatisticas();
+			  }
+			  
+			  if (!contadorEl.classList.contains('hidden')) {
+				atualizarChartDesempenho();
+			  }
+			}
+			
+			function alternarTema() {
+			  document.body.classList.toggle('dark');
+			  localStorage.setItem(TEMA_KEY, document.body.classList.contains('dark') ? 'dark' : 'light');
+			  
+			  // Atualizar gráficos quando o tema muda
+			  const historicoEl = document.getElementById('historico');
+			  const contadorEl = document.getElementById('contador');
+			  
+			  if (!historicoEl.classList.contains('hidden')) {
+				atualizarEstatisticas();
+			  }
+			  
+			  if (!contadorEl.classList.contains('hidden')) {
+				atualizarChartDesempenho();
+			  }
+			}
+			
+			function salvarNomeRelatorio() {
+			  desempenho.contador.nome = this.value;
+			  salvarDados();
+			}
+			
+			// Inicialização
+			document.addEventListener('DOMContentLoaded', function() {
+			  // Configurar manipuladores de eventos
+			  document.getElementById('toggleView').addEventListener('click', alternarVisao);
+			  document.getElementById('toggleDark').addEventListener('click', alternarTema);
+			  document.getElementById('btnAcertou').addEventListener('click', registrarAcerto);
+			  document.getElementById('btnErrou').addEventListener('click', registrarErro);
+			  document.getElementById('btnResetar').addEventListener('click', salvarEResetar);
+			  document.getElementById('btnImprimirPDF').addEventListener('click', exportarPDF);
+			  document.getElementById('nome_relatorio').addEventListener('input', salvarNomeRelatorio);
+			  
+			  // Carregar tema salvo
+			  if (localStorage.getItem(TEMA_KEY) === 'dark') {
+				document.body.classList.add('dark');
+			  }
+			  
+			  // Inicializar interface
+			  atualizarContador();
+			  atualizarEstatisticas();
+			  atualizarChartDesempenho();
+			  
+			  // Carregar nome do relatório se existir
+			  if (desempenho.contador.nome) {
+				document.getElementById('nome_relatorio').value = desempenho.contador.nome;
+			  }
+			});
+		  </script>
+		  </body>
+	</html>
